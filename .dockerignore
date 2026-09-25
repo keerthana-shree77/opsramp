@@ -1,0 +1,40 @@
+# The secrets. These are supplied at run time, never built in: an image is
+# copied, pushed and pulled, and anything baked into it travels with it.
+.env
+*.pem
+
+# State. The cache and the uploaded recipes belong on the volume, and a copy
+# from a developer's machine would start the container with somebody else's
+# estate in it.
+var/
+tools/__pycache__/
+
+# The host's virtualenv - the wrong platform's binaries, and large.
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Build and test leavings that the running service has no use for.
+.git/
+.gitignore
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+requirements-dev.txt
+
+# Windows conveniences, and the diagnostics they write.
+*.bat
+OPSRAMP-DIAGNOSTIC.txt
+RECIPE-REPORT.txt
+recipe_path.tmp
+*.xlsx.tmp
+
+# The extension is installed in a browser, not served by the portal.
+extension/
+
+# Container definitions do not belong inside the image they build.
+Dockerfile
+.dockerignore
+compose.yaml

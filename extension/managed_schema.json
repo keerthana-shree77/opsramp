@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "portalUrl": {
+      "title": "Portal address",
+      "description": "The full address of the internal Firmware Compliance Portal, for example https://firmware.example.hpe.com. Set by administrators through Chrome policy; when set, users cannot change it.",
+      "type": "string"
+    }
+  }
+}

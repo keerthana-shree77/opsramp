@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Processing &middot; {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="card" id="progress-card" data-poll-url="{{ url_for('job_state', job_id=job.id) }}">
+  <h1>Extracting firmware from OpsRamp</h1>
+
+  <dl class="kv">
+    <dt>Tenant</dt><dd>{{ job.tenant_name }}</dd>
+    <dt>Category</dt><dd>{{ job.category|capitalize }}</dd>
+    <dt>Recipe</dt><dd>{{ job.recipe_name }}</dd>
+  </dl>
+
+  <p class="progress-message" id="progress-message">Starting&hellip;</p>
+
+  <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+       aria-valuenow="0" id="progress-bar-wrap">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <p class="progress-percent" id="progress-percent">0%</p>
+
+  <ul class="stats">
+    <li><span class="stat-label">Assets discovered</span><span class="stat-value" id="stat-discovered">&ndash;</span></li>
+    <li><span class="stat-label">Assets in scope</span><span class="stat-value" id="stat-selected">&ndash;</span></li>
+    <li><span class="stat-label">Assets processed</span><span class="stat-value" id="stat-processed">&ndash;</span></li>
+    <li><span class="stat-label">Components extracted</span><span class="stat-value" id="stat-components">&ndash;</span></li>
+  </ul>
+
+  <div class="callout callout-error hidden" id="progress-error">
+    <strong>The comparison could not be completed.</strong>
+    <p id="progress-error-text"></p>
+    <a class="btn btn-primary" href="{{ url_for('new_comparison') }}">Start over</a>
+  </div>
+
+  <p class="hint">This page refreshes automatically. Large tenants can take several minutes.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/processing.js') }}"></script>
+{% endblock %}

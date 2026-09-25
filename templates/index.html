@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}New comparison &middot; {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <p class="hint"><a href="{{ url_for('index') }}">&larr; Compliance overview</a></p>
+  <h1>Firmware compliance comparison</h1>
+  <p class="muted">
+    Select a tenant and an infrastructure category, upload the approved firmware
+    recipe, and the portal will extract the installed versions from OpsRamp and
+    compare them.
+  </p>
+
+  {% if problems %}
+    <div class="callout callout-warn">
+      <strong>Configuration incomplete.</strong>
+      <ul>{% for item in problems %}<li><code>{{ item }}</code></li>{% endfor %}</ul>
+    </div>
+  {% elif error %}
+    <div class="callout callout-error">
+      <strong>OpsRamp is not reachable.</strong>
+      <p>{{ error }}</p>
+    </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('compare') }}" enctype="multipart/form-data"
+        class="stack" id="compare-form" target="_blank">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    {% for tenant in tenants %}
+      <input type="hidden" name="tenant_label" value="{{ tenant.id }}|{{ tenant.name }}">
+    {% endfor %}
+
+    <label for="tenant_id">Select SAP Tenant(s)</label>
+    <select id="tenant_id" name="tenant_id" required multiple size="8"
+            {% if not tenants %}disabled{% endif %}>
+      {% for tenant in tenants %}
+        <option value="{{ tenant.id }}">{{ tenant.name }}</option>
+      {% endfor %}
+    </select>
+    <p class="hint">
+      {% if tenants %}{{ tenants|length }} tenant(s) available.{% else %}No tenants available.{% endif %}
+      Hold <kbd>Ctrl</kbd> (or <kbd>Shift</kbd>) to pick several, or use the buttons.
+      <button type="button" class="linkish" data-select-all="tenant_id">Select all</button> ·
+      <button type="button" class="linkish" data-clear="tenant_id">Clear</button>
+    </p>
+
+    <label for="category">Select Infrastructure Category (one or more)</label>
+    <select id="category" name="category" required multiple size="6">
+      {% for value, label in categories %}
+        <option value="{{ value }}"{% if value == 'all' %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <p class="hint">
+      Choosing <strong>All</strong> covers every category.
+      <button type="button" class="linkish" data-clear="category">Clear</button>
+    </p>
+
+    <label for="recipe">Upload Firmware Recipe</label>
+    <input id="recipe" name="recipe" type="file" accept=".xlsx,.pdf,.csv,.json" required multiple>
+    <p class="hint">
+      <strong>Excel (.xlsx) or PDF</strong> &mdash; the HPE SAP RISE / S4HANA version
+      matrix is read directly in either form, including its
+      &ldquo;Components&rdquo; sections and page markers.
+      CSV and JSON are also accepted as a plain table with the columns
+      Platform, Category, Component and Target Version.
+      <strong>You can select several files</strong>; their targets are merged, and a
+      target already supplied by an earlier file is reported rather than replaced.
+      <a href="{{ url_for('static', filename='recipe_template.csv') }}" download>Download a plain-table template</a>.
+    </p>
+
+    <button type="submit" class="btn btn-primary" {% if not tenants %}disabled{% endif %}>
+      Extract &amp; Compare Firmware
+    </button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>What gets compared</h2>
+  <table class="mini">
+    <thead><tr><th>Platform</th><th>Category</th><th>Components extracted</th></tr></thead>
+    <tbody>
+      <tr><td>Superdome Flex 280 / SD Flex 280</td><td>Server</td><td>RMC</td></tr>
+      <tr><td>HPE ProLiant / DL servers</td><td>Server</td><td>BIOS, iLO, SPS, Intelligent Provisioning</td></tr>
+      <tr><td>Compute Scale-up Server 3200 / CSUS 3200</td><td>Server</td><td>RMC</td></tr>
+      <tr><td>HPE Alletra Storage Server 4120</td><td>Server</td><td>BIOS, iLO, SPS</td></tr>
+      <tr><td>Switches (Aruba, Brocade)</td><td>Switch</td><td>Switch Firmware</td></tr>
+      <tr><td>Storage arrays (3PAR, Alletra, Primera)</td><td>Storage</td><td>OS Version</td></tr>
+      <tr><td>VMware / ESXi hosts</td><td>ESXi</td><td>ESXi version and build</td></tr>
+      <tr><td>PDUs</td><td>PDU</td><td>PDU Firmware</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}

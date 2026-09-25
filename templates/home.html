@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+{% block title %}Compliance overview &middot; {{ app_title }}{% endblock %}
+
+{#- The recipes a row is judged by. A menu of checkboxes rather than a
+    dropdown, because the answer is often more than one: an account read
+    against this month's baseline and the one it is moving away from, each
+    keeping its own figures. It is a plain form, so it works without
+    scripting; with scripting the summary keeps count as boxes are ticked. -#}
+{% macro recipe_menu(action, picked, label, id) %}
+  {% set names = overview.recipes | selectattr('id', 'in', picked) | map(attribute='name') | list %}
+  <form method="post" action="{{ action }}" class="recipe-pick">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <details class="recipe-menu" id="{{ id }}">
+      <summary aria-label="{{ label }}">
+        <span class="recipe-menu-label">
+          {%- if not names %}Automatic
+          {%- elif names|length == 1 %}{{ names[0] }}
+          {%- else %}{{ names[0] }} <span class="recipe-menu-more">+{{ names|length - 1 }}</span>
+          {%- endif -%}
+        </span>
+      </summary>
+      <div class="recipe-menu-body">
+        <p class="recipe-menu-hint">
+          Tick none for automatic &mdash; every recipe, closest match marked.
+          Tick several and each one keeps its own line and its own figures.
+        </p>
+        {% for recipe in overview.recipes %}
+          <label class="recipe-option">
+            <input type="checkbox" name="recipe_id" value="{{ recipe.id }}"
+                   {% if recipe.id in picked %}checked{% endif %}>
+            <span>{{ recipe.name }}</span>
+          </label>
+        {% endfor %}
+        <div class="recipe-menu-actions">
+          <button type="submit" class="btn btn-primary">Apply</button>
+          <a class="linkish" href="#add-recipe">Add a new recipe&hellip;</a>
+        </div>
+      </div>
+    </details>
+  </form>
+{% endmacro %}
+
+{#- One account, one category. Which recipes a cell shows is the account's own
+    choice: one line for the recipe it has been pinned to, or a line each when
+    it is left on automatic.
+
+    Every branch here renders words. A cell that cannot show a percentage says
+    why in its own text, because a bare mark reads as a fault in the page
+    rather than as the finding it actually is. -#}
+{% macro matrix_cell(cell, row, category) %}
+  {#- The run a cell without a percentage still links to: its own line where
+      there is one, otherwise the line the rest of the row is showing. -#}
+  {% set anchor = cell.shown[0] if cell and cell.shown else row.focus %}
+  {% set named = (cell and cell.shown|length > 1)
+                 or row.selected|length > 1 or row.awaiting|length > 0 %}
+  {% if not cell %}
+    <span class="cell-none" title="This account has no assets in this category">
+      no assets
+    </span>
+  {% elif cell.comparable_any %}
+    <span class="cell-stack">
+      {% for entry in cell.shown %}
+        {% if entry.rate is not none %}
+          <a class="cell-line tone-{{ entry.tone }}{% if named and entry.id == cell.best %} is-best{% endif %}"
+             href="{{ url_for('results', job_id=entry.job_id, tenant=row.name, category=category, result='NEEDS UPDATE') }}"
+             title="{{ entry.name }} &mdash; {{ entry.updated }} of {{ entry.comparable }} comparable components up to date in {{ category }}; {{ entry.pending }} pending across {{ cell.assets }} asset(s). This recipe has a target for {{ entry.covered }} of {{ cell.components }} component(s) here.">
+            {% if named %}<span class="cell-line-name">{{ entry.name }}</span>{% endif %}
+            <span class="cell-line-rate">{{ entry.rate }}%</span>
+            <span class="cell-line-sub">{{ entry.updated }}/{{ entry.comparable }}</span>
+          </a>
+        {% else %}
+          <span class="cell-line tone-muted"
+                title="{{ entry.name }} has no approved target for anything in this cell, so it cannot score it.">
+            {% if named %}<span class="cell-line-name">{{ entry.name }}</span>{% endif %}
+            <span class="cell-line-rate">no target</span>
+          </span>
+        {% endif %}
+      {% endfor %}
+    </span>
+  {% elif anchor %}
+    <a class="cell-link tone-muted cell-unscored"
+       href="{{ url_for('results', job_id=anchor.job_id, tenant=row.name, category=category) }}"
+       title="{{ cell.explain }}">
+      <span class="cell-rate">{{ cell.unscored or 'not scored' }}</span>
+      <span class="cell-sub">{{ cell.components }} component(s)</span>
+    </a>
+  {% else %}
+    {#- The recipes this cell was measured against have since left the
+        library, so there is nothing to link to until the next sweep. -#}
+    <span class="cell-none" title="{{ cell.explain }}">
+      {{ cell.components }} component(s), not measured
+    </span>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="card" id="overview-card"
+     data-poll-url="{{ url_for('overview_state') }}"
+     data-status="{{ overview.status }}"
+     data-done="{{ overview.done_count }}">
+  <div class="result-head">
+    <div>
+      <h1>Firmware compliance by account</h1>
+      <p class="muted">
+        Every account, measured against every approved recipe. A percentage
+        counts only what could actually be compared &mdash; a component with an
+        approved target and a version read from OpsRamp.
+      </p>
+      <dl class="kv kv-inline">
+        <dt>Recipes</dt>
+        <dd>
+          {% if library.configured %}
+            {{ library.count }} in the library
+            {%- if library.seeded %}
+              <span class="muted">(from DEFAULT_RECIPE_PATH)</span>
+            {%- endif %}
+          {% else %}
+            <span class="muted">none set</span>
+          {% endif %}
+        </dd>
+        <dt>Last measured</dt>
+        <dd id="last-refreshed" data-epoch="{{ overview.finished_at or '' }}">
+          {% if overview.finished_at %}&mdash;{% else %}never{% endif %}
+        </dd>
+        <dt>Last read from OpsRamp</dt>
+        <dd>
+          {#- The stamp is its own element: the script replaces its text with
+              the reader's local time and would otherwise eat the note. -#}
+          <span id="last-read" data-epoch="{{ overview.read_at or '' }}">
+            {%- if overview.read_at %}&mdash;{% else %}never{% endif -%}
+          </span>
+          {%- if overview.unchanged %}
+            <span class="meter-note">
+              {{ overview.unchanged }} account(s) unchanged since the last read
+            </span>
+          {%- endif %}
+        </dd>
+        <dt>Next refresh</dt>
+        <dd id="next-refresh" data-epoch="{{ overview.next_refresh_at or '' }}">
+          {% if overview.next_refresh_at %}&mdash;{% else %}on request{% endif %}
+        </dd>
+        <dt>Accounts</dt>
+        <dd>{{ overview.done_count }} of {{ overview.total_count or '?' }} measured</dd>
+      </dl>
+    </div>
+    <div class="downloads">
+      <form method="post" action="{{ url_for('overview_refresh') }}" class="inline-form">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary" id="refresh-btn"
+                {% if overview.status == 'running' %}disabled{% endif %}>
+          {% if overview.status == 'running' %}Refreshing&hellip;{% else %}Refresh now{% endif %}
+        </button>
+      </form>
+      <a class="btn" href="{{ url_for('new_comparison') }}">One-off comparison</a>
+    </div>
+  </div>
+
+  {% if problems %}
+    <div class="callout callout-warn">
+      <strong>Configuration incomplete.</strong>
+      <ul>{% for item in problems %}<li><code>{{ item }}</code></li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  {% if not library.configured %}
+    <div class="callout callout-warn" id="add-recipe">
+      <strong>Add a recipe to get started.</strong>
+      <p>
+        Upload one and every account is measured against it from then on
+        &mdash; no tenant to choose, and no file to upload again. Add more than
+        one and each account is measured against all of them, which is what
+        shows you which baseline it is actually built to.
+      </p>
+      <form method="post" action="{{ url_for('recipe_add') }}"
+            enctype="multipart/form-data" class="recipe-form">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="file" name="recipe" accept=".pdf,.xlsx,.csv,.json" required
+               multiple aria-label="Recipe files">
+        <input type="text" name="name" maxlength="60" placeholder="Name it, e.g. Q3 baseline"
+               aria-label="Recipe name">
+        <button type="submit" class="btn btn-primary">Upload and measure</button>
+      </form>
+      <p class="hint">
+        <strong>PDF</strong> or <strong>Excel</strong> of the HPE SAP RISE /
+        S4HANA version matrix, or a plain table as CSV or JSON. The published
+        PDFs can be uploaded as they come &mdash; there is no need to convert
+        them first. Select several at once and they become one recipe, which
+        is what you want for the CDC and S4HANA matrices of the same release.
+        The name is yours to choose; leave it blank and the file name is used.
+      </p>
+    </div>
+  {% elif overview.error %}
+    <div class="callout callout-error">
+      <strong>The last refresh did not finish cleanly.</strong>
+      <p>{{ overview.error }}</p>
+    </div>
+  {% endif %}
+
+  {% if overview.unmeasured %}
+    <div class="callout callout-warn">
+      <strong>Not measured yet.</strong>
+      <p>
+        {{ overview.unmeasured|map(attribute='name')|join(', ') }}
+        {% if overview.unmeasured|length == 1 %}was{% else %}were{% endif %}
+        added since the last sweep.
+        {% if overview.remeasure_queued %}
+          A sweep is running, so
+          {% if overview.unmeasured|length == 1 %}it{% else %}they{% endif %}
+          will be measured the moment it finishes &mdash; nothing to do.
+        {% elif overview.status == 'running' %}
+          Measuring now.
+        {% else %}
+          Press <strong>Refresh now</strong> to measure
+          {% if overview.unmeasured|length == 1 %}it{% else %}them{% endif %}.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+
+  <p class="progress-message {% if overview.status != 'running' %}hidden{% endif %}"
+     id="sweep-status">
+    Measuring {{ overview.message }}&hellip;
+  </p>
+  <div class="progress {% if overview.status != 'running' %}hidden{% endif %}"
+       id="sweep-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+       aria-valuenow="0">
+    <div class="progress-fill" id="sweep-fill"></div>
+  </div>
+
+  {% if overview.totals.tenants %}
+    <ul class="cards">
+      <li class="summary-card tone-{{ overview.totals.tone }}">
+        <span class="summary-value">{{ overview.totals.rate if overview.totals.rate is not none else 'n/a' }}{% if overview.totals.rate is not none %}%{% endif %}</span>
+        <span class="summary-label">
+          Compliance
+          {%- if overview.totals.leader %} vs {{ overview.totals.leader }}{% endif %}
+        </span>
+      </li>
+      <li class="summary-card tone-neutral">
+        <span class="summary-value">{{ overview.totals.tenants }}</span>
+        <span class="summary-label">Accounts measured</span>
+      </li>
+      <li class="summary-card tone-neutral">
+        <span class="summary-value">{{ overview.totals.assets }}</span>
+        <span class="summary-label">Assets</span>
+      </li>
+      <li class="summary-card tone-ok">
+        <span class="summary-value">{{ overview.totals.updated }}</span>
+        <span class="summary-label">Updated</span>
+      </li>
+      <li class="summary-card tone-bad">
+        <span class="summary-value">{{ overview.totals.needs_update }}</span>
+        <span class="summary-label">Needs update</span>
+      </li>
+      <li class="summary-card tone-warn">
+        <span class="summary-value">{{ overview.totals.not_detected }}</span>
+        <span class="summary-label">Not detected</span>
+      </li>
+      <li class="summary-card tone-muted">
+        <span class="summary-value">{{ overview.totals.not_in_recipe }}</span>
+        <span class="summary-label">Not in recipe</span>
+      </li>
+    </ul>
+    {% if overview.totals.leader %}
+      <p class="hint">
+        The headline is measured against <strong>{{ overview.totals.leader }}</strong>,
+        the recipe with an approved target for the most of what is installed.
+        Scoring an estate against a baseline it does not follow says nothing
+        useful about it.
+      </p>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% if library.configured %}
+<div class="card">
+  <h2>Approved recipes</h2>
+  <p class="muted">
+    Every account is measured against all of these. Upload this month's
+    revision under a name that is already here and it replaces that one.
+  </p>
+
+  <div class="table-wrap">
+    <table class="results">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>File</th>
+          <th>Targets</th>
+          <th>Estate coverage</th>
+          <th>Compliance</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {#- From the snapshot rather than the library, because a recipe seeded
+            from DEFAULT_RECIPE_PATH has no recorded target count until a sweep
+            has parsed it. -#}
+        {% for recipe in overview.recipes %}
+          {% set totals = (overview.totals.recipes | selectattr('id', 'equalto', recipe.id) | list | first) %}
+          <tr>
+            <td>
+              {% if recipe.source == 'upload' %}
+                <form method="post" action="{{ url_for('recipe_rename', recipe_id=recipe.id) }}"
+                      class="inline-form">
+                  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                  <input type="text" name="name" value="{{ recipe.name }}" maxlength="60"
+                         class="name-input" aria-label="Name of {{ recipe.name }}">
+                  <button type="submit" class="linkish">Rename</button>
+                </form>
+              {% else %}
+                {{ recipe.name }}
+              {% endif %}
+            </td>
+            <td class="mono">
+              {{ recipe.filename }}
+              {%- if recipe.files and recipe.files > 1 %}
+                <span class="meter-note">{{ recipe.files }} files, read together</span>
+              {%- endif %}
+            </td>
+            <td>{{ recipe.targets or '&mdash;'|safe }}</td>
+            <td>
+              {% if totals and totals.coverage is not none %}
+                {{ totals.coverage }}%
+                <span class="meter-note">{{ totals.covered }} of {{ totals.components }} components</span>
+              {% else %}
+                <span class="muted">not measured yet</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if totals and totals.rate is not none %}
+                <span class="pill tone-{{ totals.tone }}">{{ totals.rate }}%</span>
+                <span class="meter-note">{{ totals.updated }} of {{ totals.comparable }}</span>
+              {% else %}
+                <span class="muted">&mdash;</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if recipe.source == 'upload' %}
+                <form method="post" action="{{ url_for('recipe_delete', recipe_id=recipe.id) }}"
+                      class="inline-form">
+                  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                  <button type="submit" class="linkish">Remove</button>
+                </form>
+              {% else %}
+                <span class="muted">from settings</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <details class="recipe-swap" id="add-recipe">
+    <summary>Add another recipe</summary>
+    <p class="hint">
+      PDF, Excel, CSV or JSON. The published version-matrix PDFs can be
+      uploaded as they come. Select several files at once and they become one
+      recipe &mdash; the CDC and S4HANA matrices of one release describe a
+      single baseline between them. A new recipe is checked before it joins
+      the library, and every account is measured again straight away.
+    </p>
+    <form method="post" action="{{ url_for('recipe_add') }}"
+          enctype="multipart/form-data" class="recipe-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="file" name="recipe" accept=".pdf,.xlsx,.csv,.json" required
+             multiple aria-label="Recipe files">
+      <input type="text" name="name" maxlength="60" placeholder="Name it, e.g. Q3 baseline"
+             aria-label="Recipe name">
+      <button type="submit" class="btn btn-primary">Upload and measure</button>
+    </form>
+  </details>
+</div>
+{% endif %}
+
+{% if overview.tenants %}
+<div class="card">
+  <div class="result-head">
+    <div>
+      <h2>Compliance matrix</h2>
+      <p class="muted">
+        Each cell is one account in one category, with a line per recipe. Click
+        a percentage to see exactly what is pending there &mdash; the components
+        needing an update, and those whose version could not be read.
+      </p>
+    </div>
+
+    {#- The same choice the Recipe column makes for one account, made for all
+        of them at once. It overwrites what each account was set to
+        individually, which is what "for all accounts" has to mean. -#}
+    <div class="recipe-pick-all">
+      <label for="menu-all">Recipes for all accounts</label>
+      {% if overview.selected_everywhere is none %}
+        {#- They disagree, so no set of ticks is the truth. Saying so beats
+            showing one account's choice as though it were the estate's. -#}
+        <span class="meter-note">Mixed &mdash; choose here to set them all</span>
+        {{ recipe_menu(url_for('overview_recipe'), [],
+                       'Recipes every account is measured against', 'menu-all') }}
+      {% else %}
+        {{ recipe_menu(url_for('overview_recipe'), overview.selected_everywhere,
+                       'Recipes every account is measured against', 'menu-all') }}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="results matrix">
+      <thead>
+        <tr>
+          <th class="col-account">Account</th>
+          <th class="col-recipe">Recipe</th>
+          <th>Overall</th>
+          {% for category in overview.categories %}<th>{{ category }}</th>{% endfor %}
+          <th>Pending</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in overview.tenants %}
+          {% set best = (row.recipes | selectattr('id', 'equalto', row.best) | list | first) %}
+          <tr>
+            <td class="col-account mono">
+              {{ row.name }}
+              {% if row.status == 'running' %}
+                <span class="row-state">measuring&hellip; showing the last result</span>
+              {% elif row.status == 'pending' %}
+                <span class="row-state">queued</span>
+              {% elif row.status == 'error' %}
+                <span class="row-state row-state-error" title="{{ row.error }}">failed</span>
+              {% endif %}
+            </td>
+
+            {#- The recipe this account is judged by. Left on automatic it is
+                whichever one its firmware most closely follows; pick one and
+                this row shows that recipe and only that recipe. The choice is
+                this account's alone and is remembered across restarts. -#}
+            <td class="cell col-recipe">
+              {{ recipe_menu(
+                   url_for('tenant_recipe', tenant_id=row.tenant_id),
+                   row.selected,
+                   'Recipes ' ~ row.name ~ ' is measured against',
+                   'menu-' ~ row.tenant_id) }}
+              {% if row.awaiting %}
+                <span class="meter-note">
+                  no figures against
+                  {{ row.awaiting|join(', ') }} yet &mdash; checking
+                </span>
+              {% elif row.automatic and best %}
+                <span class="meter-note"
+                      title="{{ best.name }} has an approved target for {{ best.covered }} of this account's {{ best.components }} component(s) &mdash; more than any other recipe, so this is the baseline it is built to.">
+                  closest match of {{ row.recipes|length }}
+                </span>
+              {% elif row.automatic and row.status == 'done' %}
+                <span class="cell-none" title="No recipe has an approved target for anything found in this account.">
+                  no recipe matches
+                </span>
+              {% endif %}
+            </td>
+
+            {#- Cells are shown whenever the account has been measured, even
+                while it is being measured again. Blanking the row would empty
+                most of the grid during a sweep, and the figures from the last
+                one are still true until the new ones land. -#}
+            {% set named = row.shown|length > 1
+                           or row.selected|length > 1
+                           or row.awaiting|length > 0 %}
+            <td class="cell">
+              {% if row.shown %}
+                <span class="cell-stack">
+                  {% for entry in row.shown %}
+                    {% if entry.rate is not none %}
+                      <a class="cell-line tone-{{ entry.tone }}{% if named and entry.id == row.best %} is-best{% endif %}"
+                         href="{{ url_for('results', job_id=entry.job_id, tenant=row.name, result='NEEDS UPDATE') }}"
+                         title="{{ entry.name }} &mdash; {{ entry.updated }} of {{ entry.comparable }} comparable components up to date; this recipe has a target for {{ entry.covered }} of {{ entry.components }}.">
+                        {% if named %}<span class="cell-line-name">{{ entry.name }}</span>{% endif %}
+                        <span class="cell-line-rate">{{ entry.rate }}%</span>
+                        <span class="cell-line-sub">{{ entry.updated }}/{{ entry.comparable }}</span>
+                      </a>
+                    {% else %}
+                      <span class="cell-line tone-muted"
+                            title="{{ entry.name }} has no approved target for anything found in this account.">
+                        {% if named %}<span class="cell-line-name">{{ entry.name }}</span>{% endif %}
+                        <span class="cell-line-rate">no target</span>
+                      </span>
+                    {% endif %}
+                  {% endfor %}
+                </span>
+              {% elif row.awaiting %}
+                <span class="cell-none"
+                      title="This account has not been measured against {{ row.selected_name }} yet. It is being checked now; the figures appear here when it finishes.">
+                  not measured against {{ row.selected_name }} yet
+                </span>
+              {% elif row.status == 'done' %}
+                <span class="cell-none" title="Nothing in this account could be compared.">
+                  not scored
+                </span>
+              {% endif %}
+            </td>
+
+            {% for category in overview.categories %}
+              <td class="cell">
+                {% if row.shown %}
+                  {{ matrix_cell(row.cells.get(category), row, category) }}
+                {% endif %}
+              </td>
+            {% endfor %}
+
+            <td class="cell">
+              {% if row.focus %}
+                {% if row.focus.pending %}
+                  <a class="pill tone-bad"
+                     href="{{ url_for('results', job_id=row.focus.job_id, tenant=row.name, result='NEEDS UPDATE') }}"
+                     title="Against {{ row.focus.name }}: {{ row.focus.needs_update }} needing an update and {{ row.focus.not_detected }} with no version read.">{{ row.focus.pending }}</a>
+                {% else %}
+                  <span class="pill tone-ok" title="Nothing outstanding against {{ row.focus.name }}.">0</span>
+                {% endif %}
+              {% endif %}
+            </td>
+
+            <td>
+              {% if row.focus %}
+                <a class="btn" href="{{ url_for('results', job_id=row.focus.job_id, tenant=row.name) }}">All rows</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="hint">
+    The <strong>Recipe</strong> column decides what each row shows, and each
+    account is remembered separately; <strong>Recipes for all accounts</strong>
+    above sets every one of them at once and reads <em>Mixed</em> while they
+    differ. Tick none and the row shows every recipe
+    with the closest match marked; tick one and the row shows that recipe
+    alone; tick several and <strong>each keeps its own line, its own
+    percentage and its own counts</strong>, which is how you read an account
+    against this month's baseline and the one it is moving away from at the
+    same time. Nothing is re-compared whichever you choose &mdash; every
+    account is measured against every recipe in the library, so the figures
+    are already worked out. Choosing does check that account against OpsRamp
+    straight away, ahead of the routine refresh, and rewrites the figures only
+    if something has actually moved.
+  </p>
+
+  <p class="hint">
+    <strong>no assets</strong> means the account has nothing in that category.
+    <strong>no target</strong> in place of a percentage means the account has
+    equipment there that no recipe names &mdash; a gap in the recipe, not in
+    the tool; open the cell to see which models. <strong>no version</strong>
+    means OpsRamp reported no firmware version for them &mdash; a gap in the
+    inventory. Either way a percentage would be misleading, so none is shown,
+    and the cell still links to the rows behind it.
+    <strong>no target</strong> on one line means that particular recipe has
+    nothing to say about this equipment.
+    The grid is cached, so it is here the moment you sign in and survives a
+    restart; the figures are from the time shown above, not from this instant.
+    What was read from OpsRamp is kept separately from what it was measured
+    against, so adding or removing a recipe re-measures every account from
+    what has already been read &mdash; in seconds, and without touching
+    OpsRamp. Only the background scan reads the estate again, and it leaves
+    accounts whose firmware has not moved exactly as they were.
+  </p>
+</div>
+{% elif library.configured %}
+<div class="card">
+  <h2>Not measured yet</h2>
+  <p class="muted">
+    Press <strong>Refresh now</strong> and every account will be compared
+    against every recipe in the library. The grid fills in as each account
+    finishes, so you can watch it populate. This queries every asset of every
+    account, so the first run takes a while.
+  </p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+{% endblock %}

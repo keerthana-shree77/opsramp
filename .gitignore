@@ -1,0 +1,20 @@
+.env
+var/
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+*.xlsx.tmp
+RECIPE-REPORT.txt
+recipe_path.tmp
+OPSRAMP-DIAGNOSTIC.txt
+
+# Chrome extension packaging. The .pem is the signing key: it decides the
+# extension's identity, so a leak lets somebody else publish an update that
+# managed browsers will accept as ours.
+*.crx
+*.pem
+*.zip

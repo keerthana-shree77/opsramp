@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Firmware Compliance Portal</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1>Firmware Compliance Portal</h1>
+    <p class="lead">
+      Pressing the toolbar button opens this address in a new tab. Nothing
+      else is read or sent.
+    </p>
+
+    <form id="settings" novalidate>
+      <label for="url">Portal address</label>
+      <input id="url" name="url" type="url" spellcheck="false"
+             autocomplete="off" placeholder="https://">
+      <p class="hint" id="hint">
+        Ask whoever runs the portal for the address. It is an internal site,
+        so you will need to be on the HPE network to reach it.
+      </p>
+      <p class="message" id="message" role="status" aria-live="polite"></p>
+      <div class="actions">
+        <button type="submit" id="save">Save</button>
+        <button type="button" id="open" class="secondary">Open the portal</button>
+      </div>
+    </form>
+
+    <p class="managed" id="managed" hidden>
+      This address is set by your administrator and cannot be changed here.
+    </p>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

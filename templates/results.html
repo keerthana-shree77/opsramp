@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Compliance report &middot; {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="result-head">
+    <div>
+      <h1>OpsRamp Firmware Compliance Report</h1>
+      <dl class="kv kv-inline">
+        <dt>Tenant</dt><dd>{{ result.tenant_name }}</dd>
+        <dt>Category</dt><dd>{{ result.summary.category }}</dd>
+        <dt>Recipe</dt><dd>{{ result.recipe_name }}</dd>
+        <dt>Compliance</dt><dd>{{ compliance }}% of comparable components</dd>
+      </dl>
+    </div>
+    <div class="downloads">
+      <a class="btn btn-primary" href="{{ url_for('download', job_id=job.id, fmt='xlsx') }}">Download XLSX</a>
+      <a class="btn" href="{{ url_for('download', job_id=job.id, fmt='csv') }}">Comparison CSV</a>
+      <a class="btn" href="{{ url_for('download', job_id=job.id, fmt='raw-csv') }}">Raw OpsRamp CSV</a>
+      <a class="btn" href="{{ url_for('download', job_id=job.id, fmt='recipe-csv') }}">Recipe CSV</a>
+      <a class="btn" href="{{ url_for('download', job_id=job.id, fmt='json') }}">JSON</a>
+      <a class="btn" href="{{ url_for('index') }}">Overview</a>
+      <a class="btn btn-ghost" href="{{ url_for('new_comparison') }}">New comparison</a>
+    </div>
+  </div>
+
+  <ul class="cards">
+    {% for card in cards %}
+      <li class="summary-card tone-{{ card.tone }}{% if card.status %} clickable{% endif %}"
+          {% if card.status %}data-status="{{ card.status }}" title="Filter by {{ card.status }}"{% endif %}>
+        <span class="summary-value">{{ card.value }}</span>
+        <span class="summary-label">{{ card.label }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
+  <div class="filters" id="filters">
+    <div class="filter">
+      <label for="f-search">Search</label>
+      <input id="f-search" type="search" placeholder="hostname, IP, model, component&hellip;">
+    </div>
+    {% for name, label in [('result','Result'), ('category','Category'), ('platform','Platform'), ('model','Model'), ('component','Component'), ('tenant','Tenant')] %}
+      <div class="filter">
+        <label for="f-{{ name }}">{{ label }}</label>
+        <select id="f-{{ name }}" data-field="{{ name }}">
+          <option value="">All</option>
+          {% for option in options[name] %}<option value="{{ option }}">{{ option }}</option>{% endfor %}
+        </select>
+      </div>
+    {% endfor %}
+    <div class="filter filter-actions">
+      <button type="button" class="btn btn-ghost" id="f-reset">Reset</button>
+    </div>
+  </div>
+
+  <p class="hint" id="row-count" data-total="{{ rows|length }}">{{ rows|length }} of {{ rows|length }} rows</p>
+
+  <div class="table-wrap">
+    <table class="results" id="results-table">
+      <thead>
+        <tr>
+          <th>Tenant</th>
+          <th>Hostname</th>
+          <th>IP</th>
+          <th>Category</th>
+          <th>Platform</th>
+          <th>Model</th>
+          <th>Component</th>
+          <th>Installed (X)</th>
+          <th>Target (Y)</th>
+          <th>Installed Build</th>
+          <th>Target Build</th>
+          <th>Result</th>
+          <th class="col-reason">Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr data-tenant="{{ row.tenant }}"
+              data-category="{{ row.category }}"
+              data-platform="{{ row.platform }}"
+              data-model="{{ row.model }}"
+              data-component="{{ row.component }}"
+              data-result="{{ row.result }}"
+              data-search="{{ (row.hostname ~ ' ' ~ row.ip_address ~ ' ' ~ row.resource_name ~ ' ' ~ row.model ~ ' ' ~ row.component ~ ' ' ~ row.platform ~ ' ' ~ row.installed_version ~ ' ' ~ row.target_version)|lower }}">
+            <td>{{ row.tenant }}</td>
+            {#- Some hardware has no hostname in OpsRamp and is registered
+                under its management address, which leaves a row identified
+                only by an IP - unreadable when a rack of them lists in a
+                block. The resource name says which machine it is, so it is
+                shown whenever it adds something the hostname does not. -#}
+            <td class="mono">
+              {{ row.hostname }}
+              {%- if row.resource_name and row.resource_name != row.hostname %}
+                <span class="row-state">{{ row.resource_name }}</span>
+              {%- endif %}
+            </td>
+            <td class="mono">{{ row.ip_address }}</td>
+            <td>{{ row.category }}</td>
+            <td>{{ row.platform }}</td>
+            <td>{{ row.model }}</td>
+            <td>{{ row.component }}</td>
+            <td class="mono">{{ row.installed_version or '—' }}</td>
+            <td class="mono">{{ row.target_version or '—' }}</td>
+            <td class="mono">{{ row.installed_build or '' }}</td>
+            <td class="mono">{{ row.target_build or '' }}</td>
+            <td><span class="pill tone-{{ status_tone.get(row.result, 'neutral') }}">{{ row.result }}</span></td>
+            <td class="col-reason">
+              {{ row.reason }}
+              {% if row.source_attribute %}
+                <span class="source">Source: <code>{{ row.source_attribute }}</code>{% if row.match_level %} &middot; matched at {{ row.match_level }}{% endif %}</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="13" class="empty">
+            No matching assets were found for tenant {{ result.tenant_name }} in category
+            {{ result.summary.category }}.
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Run details</h2>
+  <pre class="report-text">{{ text_report }}</pre>
+  <p class="hint">
+    {{ result.assets_total }} asset(s) discovered in the tenant,
+    {{ result.assets_matched }} in scope for this category,
+    {{ result.raw_rows|length }} raw OpsRamp attribute record(s) preserved,
+    {{ result.recipe_entries|length }} recipe entr(ies) used.
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/results.js') }}"></script>
+{% endblock %}

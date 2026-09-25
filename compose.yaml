@@ -1,0 +1,66 @@
+# One service, one replica. See the note at the top of the Dockerfile: the
+# matrix and the job store live in the process, so a second copy of this
+# container is a second sweep disagreeing with the first.
+
+services:
+  portal:
+    build: .
+    image: firmware-portal:latest
+    restart: unless-stopped
+
+    # Settings and secrets arrive at run time. The image holds none of them,
+    # which is what lets the same image run in test and in production.
+    env_file:
+      - .env
+
+    environment:
+      # Set here rather than in .env because they describe the container's
+      # own layout, not the deployment's.
+      CACHE_DB_PATH: /data/cache.db
+      UPLOAD_DIR: /data/uploads
+      # The session cookie is only sent back over HTTPS, so the proxy in
+      # front of this must terminate TLS - and, having terminated it, must
+      # say so in X-Forwarded-Proto, which is what the next line trusts.
+      SESSION_COOKIE_SECURE: "true"
+      # One proxy: the one publishing this on 443. Add to it only if you add
+      # another hop - each one you claim is a hop whose headers are believed.
+      TRUSTED_PROXY_HOPS: "1"
+
+    # Bound to loopback: the portal signs people in over a plain HTTP
+    # connection inside the host, and a reverse proxy adds the TLS. Publish
+    # this on 0.0.0.0 and the sign-in crosses the network in the clear.
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    volumes:
+      - portal-data:/data
+      # The model equivalences name accounts, so a site may keep its own copy
+      # out of the image. Drop the line to use the one the source ships with.
+      # - ./model_aliases.csv:/config/model_aliases.csv:ro
+
+    # Nothing is written outside /data and /tmp. If some dependency later
+    # needs another path this is the first line to relax - and worth a look
+    # at why it wants one.
+    read_only: true
+    tmpfs:
+      - /tmp
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    # A sweep holds every account's inventory in memory at once.
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  portal-data:

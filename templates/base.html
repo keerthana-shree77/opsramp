@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_title }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="brand-mark" aria-hidden="true">FW</span>
+      <span>{{ app_title }}</span>
+    </a>
+    {% if session.get('user') %}
+      <nav class="topnav">
+        <a href="{{ url_for('index') }}">Overview</a>
+        <a href="{{ url_for('new_comparison') }}">New comparison</a>
+      </nav>
+      <form method="post" action="{{ url_for('logout') }}" class="inline-form">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <span class="who">{{ session.get('user') }}</span>
+        <button type="submit" class="btn btn-ghost">Sign out</button>
+      </form>
+    {% endif %}
+  </div>
+</header>
+
+<main class="page">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <p>Internal tool &middot; X-axis = versions discovered in OpsRamp &middot; Y-axis = approved versions from the uploaded recipe</p>
+</footer>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

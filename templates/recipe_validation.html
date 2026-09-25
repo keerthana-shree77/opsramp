@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Recipe validation failed &middot; {{ app_title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Recipe Validation Failed</h1>
+  <p class="muted">
+    File: <code>{{ filename }}</code>. The OpsRamp extraction was not started,
+    because comparing against an invalid recipe would produce a misleading report.
+  </p>
+
+  <div class="callout callout-error">
+    <strong>{{ errors|length }} error{{ '' if errors|length == 1 else 's' }} detected:</strong>
+    <ol class="issue-list">
+      {% for issue in errors %}<li>{{ issue.render() }}</li>{% endfor %}
+    </ol>
+  </div>
+
+  {% if warnings %}
+    <div class="callout callout-warn">
+      <strong>{{ warnings|length }} warning{{ '' if warnings|length == 1 else 's' }}:</strong>
+      <ol class="issue-list">
+        {% for issue in warnings %}<li>{{ issue.render() }}</li>{% endfor %}
+      </ol>
+    </div>
+  {% endif %}
+
+  {% if report %}
+    <p class="hint">
+      {{ report.total_rows }} row(s) read, {{ report.skipped_empty }} empty row(s) skipped,
+      {{ report.entries|length }} entr(ies) parsed.
+    </p>
+  {% endif %}
+
+  <a class="btn btn-primary" href="{{ url_for('new_comparison') }}">Back to the comparison form</a>
+</div>
+
+<div class="card">
+  <h2>Expected recipe columns</h2>
+  <table class="mini">
+    <thead><tr><th>Column</th><th>Required</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Platform</td><td>Yes</td><td>e.g. Superdome Flex, HPE DL, CSUS, Aruba, Storage, VMware</td></tr>
+      <tr><td>Model</td><td>No</td><td>Leave blank or use <code>*</code> to apply to the whole platform family</td></tr>
+      <tr><td>Category</td><td>Yes</td><td>Server, Switch, Storage or ESXi</td></tr>
+      <tr><td>Component</td><td>Yes</td><td>RMC, BIOS, iLO, SPS, Intelligent Provisioning, Switch Firmware, OS Version, ESXi</td></tr>
+      <tr><td>Target Version</td><td>Yes</td><td>Or <code>N/A</code> when the component does not apply</td></tr>
+      <tr><td>Target Build</td><td>No</td><td>Numeric; takes precedence over the version when supplied</td></tr>
+      <tr><td>Mandatory</td><td>No</td><td>Yes / No, defaults to Yes</td></tr>
+      <tr><td>Applies To Family</td><td>No</td><td>Yes allows the row to match every model of the platform</td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}

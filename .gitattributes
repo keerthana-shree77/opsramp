@@ -1,0 +1,15 @@
+# Shell scripts must reach the VM with Unix line endings whatever machine
+# they were edited on. A script checked out with CRLF fails as
+# "bad interpreter: /usr/bin/env bash^M", which reads like a broken script
+# rather than a broken checkout.
+*.sh text eol=lf
+
+# Same reasoning: these are read by Linux inside the container.
+Dockerfile   text eol=lf
+.dockerignore text eol=lf
+*.yaml       text eol=lf
+*.yml        text eol=lf
+
+# Binary, so git must not try to fix anything in them.
+*.png binary
+*.xlsx binary

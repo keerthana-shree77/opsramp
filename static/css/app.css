@@ -1,0 +1,344 @@
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --ink: #1b2430;
+  --ink-muted: #5b6875;
+  --line: #d9dfe7;
+  --brand: #1f3864;
+  --brand-ink: #ffffff;
+  --ok-bg: #e4f7ec;
+  --ok-ink: #14653b;
+  --bad-bg: #fdeaea;
+  --bad-ink: #a01b1b;
+  --warn-bg: #fdf6e0;
+  --warn-ink: #8a6100;
+  --muted-bg: #eef1f5;
+  --muted-ink: #4c5866;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(20, 30, 45, .07), 0 4px 14px rgba(20, 30, 45, .05);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.topbar { background: var(--brand); color: var(--brand-ink); }
+.topbar-inner {
+  max-width: 1500px; margin: 0 auto; padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.brand { color: inherit; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  background: rgba(255, 255, 255, .18); border-radius: 6px;
+  padding: 4px 8px; font-size: 13px; letter-spacing: .06em;
+}
+.inline-form { display: flex; align-items: center; gap: 12px; }
+.who { font-size: 13px; opacity: .85; }
+
+.page { max-width: 1500px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; }
+
+.footer {
+  max-width: 1500px; margin: 0 auto; padding: 8px 24px 32px;
+  color: var(--ink-muted); font-size: 13px;
+}
+
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px 24px;
+}
+.card-narrow { max-width: 480px; margin: 40px auto; }
+
+h1 { font-size: 22px; margin: 0 0 6px; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.muted { color: var(--ink-muted); margin-top: 0; }
+.hint { color: var(--ink-muted); font-size: 13px; }
+.mono { font-family: Consolas, "SF Mono", Menlo, monospace; font-size: 13px; }
+
+/* ------------------------------------------------------------------- forms */
+
+.stack { display: grid; gap: 8px; max-width: 560px; }
+.stack label { font-weight: 600; font-size: 13px; margin-top: 8px; }
+
+input[type="text"], input[type="password"], input[type="search"], input[type="file"], select {
+  width: 100%; padding: 9px 10px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; color: var(--ink); font: inherit;
+}
+input:focus, select:focus, button:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+select:disabled, button:disabled { opacity: .55; cursor: not-allowed; }
+
+.btn {
+  display: inline-block; padding: 9px 16px; border-radius: 8px;
+  border: 1px solid var(--line); background: #fff; color: var(--ink);
+  font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.btn:hover { border-color: var(--brand); }
+.btn-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn-ghost { background: transparent; border-color: rgba(255, 255, 255, .35); color: inherit; }
+.card .btn-ghost { border-color: var(--line); color: var(--ink); }
+.stack .btn { margin-top: 14px; justify-self: start; }
+
+/* -------------------------------------------------------------- callouts */
+
+.flashes { display: grid; gap: 8px; }
+.flash, .callout {
+  border-radius: 8px; padding: 12px 14px; border: 1px solid transparent;
+}
+.flash-error, .callout-error { background: var(--bad-bg); border-color: #f0b9b9; color: var(--bad-ink); }
+.flash-success { background: var(--ok-bg); border-color: #b6e3c9; color: var(--ok-ink); }
+.callout-warn { background: var(--warn-bg); border-color: #ecd79a; color: var(--warn-ink); }
+.callout { margin: 14px 0; }
+.callout p { margin: 6px 0 0; }
+.callout ul, .issue-list { margin: 8px 0 0; padding-left: 20px; }
+.issue-list li { margin: 3px 0; }
+.hidden { display: none; }
+
+/* ---------------------------------------------------------------- tables */
+
+table { border-collapse: collapse; width: 100%; }
+.mini { font-size: 13px; margin-top: 6px; }
+.mini th, .mini td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.mini th { color: var(--ink-muted); font-weight: 600; }
+
+.table-wrap { overflow: auto; max-height: 68vh; border: 1px solid var(--line); border-radius: 8px; }
+.results { font-size: 13px; }
+.results th {
+  position: sticky; top: 0; z-index: 1; background: #eef1f6;
+  text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.results td { padding: 8px 10px; border-bottom: 1px solid #edf0f4; vertical-align: top; }
+.results tbody tr:hover { background: #f7f9fc; }
+.col-reason { min-width: 280px; max-width: 460px; color: var(--ink-muted); }
+.source { display: block; margin-top: 3px; font-size: 11px; opacity: .85; word-break: break-all; }
+.empty { text-align: center; padding: 28px; color: var(--ink-muted); }
+
+/* --------------------------------------------------------- summary cards */
+
+.cards { list-style: none; display: flex; flex-wrap: wrap; gap: 12px; padding: 0; margin: 18px 0 0; }
+.summary-card {
+  min-width: 150px; flex: 1 1 150px; padding: 14px 16px;
+  border-radius: 10px; border: 1px solid var(--line); background: var(--muted-bg);
+}
+.summary-value { display: block; font-size: 26px; font-weight: 700; line-height: 1.1; }
+.summary-label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; margin-top: 4px; }
+.summary-card.clickable { cursor: pointer; }
+.summary-card.clickable:hover { filter: brightness(.97); }
+
+.tone-ok { background: var(--ok-bg); border-color: #b6e3c9; color: var(--ok-ink); }
+.tone-bad { background: var(--bad-bg); border-color: #f0b9b9; color: var(--bad-ink); }
+.tone-warn { background: var(--warn-bg); border-color: #ecd79a; color: var(--warn-ink); }
+.tone-muted { background: var(--muted-bg); border-color: var(--line); color: var(--muted-ink); }
+.tone-neutral { background: #eaeef6; border-color: #cfd8e6; color: var(--brand); }
+
+.pill {
+  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .03em; white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+/* -------------------------------------------------------------- filters */
+
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.filter { display: grid; gap: 4px; min-width: 150px; flex: 0 1 180px; }
+.filter label { font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+.filter select, .filter input { padding: 7px 9px; font-size: 13px; }
+.filter-actions { align-self: flex-end; flex: 0 0 auto; min-width: 0; }
+#f-search { min-width: 240px; }
+.filter:first-child { flex: 1 1 260px; }
+
+/* ---------------------------------------------------------- result head */
+
+.result-head { display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; align-items: flex-start; }
+.downloads { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 10px 0 0; font-size: 14px; }
+.kv dt { color: var(--ink-muted); font-weight: 600; }
+.kv dd { margin: 0; }
+.kv-inline { max-width: 520px; }
+
+.report-text {
+  background: #10161f; color: #d7e2ee; border-radius: 8px;
+  padding: 16px; overflow: auto; font-size: 12.5px; line-height: 1.45;
+}
+
+/* -------------------------------------------------------------- progress */
+
+.progress {
+  height: 14px; background: var(--muted-bg); border-radius: 999px;
+  overflow: hidden; border: 1px solid var(--line); margin-top: 6px;
+}
+.progress-fill { height: 100%; width: 0; background: var(--brand); transition: width .4s ease; }
+.progress-percent { font-weight: 700; margin: 8px 0 0; }
+.progress-message { color: var(--ink-muted); margin-bottom: 4px; }
+
+.stats { list-style: none; padding: 0; margin: 18px 0 0; display: flex; flex-wrap: wrap; gap: 12px; }
+.stats li {
+  flex: 1 1 160px; background: var(--muted-bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 12px 14px;
+}
+.stat-label { display: block; font-size: 12px; color: var(--ink-muted); }
+.stat-value { display: block; font-size: 20px; font-weight: 700; }
+
+@media (max-width: 720px) {
+  .page { padding: 14px; }
+  .result-head { flex-direction: column; }
+}
+
+.linkish {
+  background: none; border: none; padding: 0; font: inherit; font-size: 13px;
+  color: var(--brand); text-decoration: underline; cursor: pointer;
+}
+.linkish:hover { opacity: .8; }
+kbd {
+  font: 12px Consolas, monospace; background: var(--muted-bg);
+  border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+}
+select[multiple] { padding: 4px; }
+select[multiple] option { padding: 4px 6px; }
+
+/* ------------------------------------------------------- compliance meter */
+
+.col-bar { min-width: 230px; }
+.meter {
+  display: block; height: 8px; margin: 6px 0 3px; border-radius: 999px;
+  background: var(--muted-bg); border: 1px solid var(--line); overflow: hidden;
+}
+.meter-fill { display: block; height: 100%; width: 0; background: var(--brand); }
+.meter-fill.tone-ok { background: #1e9e62; }
+.meter-fill.tone-warn { background: #d59a00; }
+.meter-fill.tone-bad { background: #c0392b; }
+.meter-fill.tone-muted { background: #9aa5b1; }
+.meter-note { display: block; font-size: 11px; color: var(--ink-muted); }
+.topnav { display: flex; gap: 18px; margin-left: auto; margin-right: 18px; }
+.topnav a { color: rgba(255, 255, 255, .85); text-decoration: none; font-size: 14px; }
+.topnav a:hover { color: #fff; text-decoration: underline; }
+
+/* -------------------------------------------------------- compliance matrix */
+
+.matrix th { text-align: center; }
+.matrix th.col-account { text-align: left; min-width: 210px; }
+.matrix td.col-account { white-space: normal; word-break: break-word; }
+.matrix .cell { text-align: center; padding: 6px; }
+.cell-link {
+  display: block; min-width: 74px; padding: 7px 8px; border-radius: 8px;
+  text-decoration: none; border: 1px solid transparent; line-height: 1.25;
+}
+a.cell-link:hover { filter: brightness(.95); box-shadow: 0 0 0 2px var(--brand); }
+.cell-rate { display: block; font-size: 15px; font-weight: 700; }
+.cell-sub { display: block; font-size: 10.5px; opacity: .8; }
+.cell-empty { color: var(--line); font-size: 18px; }
+a.pill { text-decoration: none; }
+
+.row-state {
+  display: block; font-size: 11px; color: var(--ink-muted); font-style: italic;
+}
+.row-state-error { color: var(--bad-ink); font-style: normal; font-weight: 600; }
+
+.recipe-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+.recipe-form input[type="file"] { width: auto; flex: 1 1 280px; }
+.recipe-swap { margin-top: 14px; }
+.recipe-swap summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--brand); }
+.recipe-swap[open] summary { margin-bottom: 6px; }
+
+/* ------------------------------------------ the recipe an account is judged by */
+
+/* One dropdown per row. It stays narrow so it cannot push the figures off the
+   side of the grid, and the chosen name is the part that must be readable. */
+.matrix th.col-recipe { text-align: left; min-width: 150px; }
+.matrix td.col-recipe { text-align: left; }
+.recipe-pick { display: flex; gap: 6px; align-items: center; margin: 0; }
+.recipe-select {
+  width: 100%; max-width: 168px; padding: 4px 6px; font-size: 12px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--surface);
+  color: inherit;
+}
+.recipe-select:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+/* Already submitted: a second choice would race the first. */
+.recipe-select.is-busy { opacity: .6; pointer-events: none; }
+
+/* The menu itself: a <details> so it opens and closes without scripting,
+   dressed to read as the dropdown it stands in for. */
+.recipe-menu { position: relative; display: inline-block; max-width: 180px; }
+.recipe-menu > summary {
+  list-style: none; cursor: pointer; padding: 4px 22px 4px 8px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--surface);
+  font-size: 12px; line-height: 1.4; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; position: relative;
+}
+.recipe-menu > summary::-webkit-details-marker { display: none; }
+.recipe-menu > summary::after {
+  content: ""; position: absolute; right: 8px; top: 50%; margin-top: -2px;
+  border: 4px solid transparent; border-top-color: var(--ink-muted);
+}
+.recipe-menu[open] > summary { border-color: var(--brand); }
+.recipe-menu > summary:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+.recipe-menu-more {
+  background: var(--muted-bg); border-radius: 999px; padding: 0 5px;
+  font-size: 10.5px; font-weight: 700;
+}
+
+/* Floated over the grid rather than widening the column. */
+.recipe-menu-body {
+  position: absolute; z-index: 5; top: calc(100% + 4px); left: 0;
+  min-width: 232px; padding: 10px; text-align: left;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: var(--shadow);
+}
+.recipe-menu-hint {
+  margin: 0 0 8px; font-size: 11px; color: var(--ink-muted); line-height: 1.35;
+}
+.recipe-option {
+  display: flex; gap: 7px; align-items: baseline; padding: 3px 0;
+  font-size: 12.5px; cursor: pointer;
+}
+.recipe-option input { width: auto; margin: 0; }
+.recipe-menu-actions {
+  display: flex; gap: 10px; align-items: center; margin-top: 9px;
+  padding-top: 8px; border-top: 1px solid var(--line);
+}
+.recipe-menu-actions .btn { padding: 5px 12px; font-size: 12px; }
+
+/* The estate-wide one is a labelled block beside the matrix heading. */
+.recipe-pick-all { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.recipe-pick-all > label {
+  font-size: 12px; font-weight: 600; color: var(--ink-muted);
+}
+
+/* --------------------------------------------- matrix cells, one line each */
+
+/* A cell carries one line per approved recipe, so a reader can see at a glance
+   that an account scores well against one baseline and badly against another -
+   which is the whole point of holding more than one. */
+.cell-stack { display: flex; flex-direction: column; gap: 3px; min-width: 116px; }
+.cell-line {
+  display: flex; align-items: baseline; gap: 6px; padding: 3px 7px;
+  border-radius: 6px; text-decoration: none; border: 1px solid transparent;
+  font-size: 12px; line-height: 1.3;
+}
+a.cell-line:hover { filter: brightness(.95); box-shadow: 0 0 0 2px var(--brand); }
+.cell-line-name {
+  font-size: 11px; opacity: .85; text-align: left; max-width: 88px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cell-line-rate { font-weight: 700; font-size: 13px; margin-left: auto; }
+.cell-line-sub { font-size: 10px; opacity: .75; }
+/* The baseline this account is actually built to. */
+.cell-line.is-best { box-shadow: inset 3px 0 0 var(--brand); }
+
+/* Nothing in the grid is ever a bare mark: a cell with no percentage says in
+   words why it has none, so it reads as a finding rather than a broken page. */
+.cell-none {
+  display: inline-block; font-size: 11px; color: var(--ink-muted);
+  font-style: italic; line-height: 1.3;
+}
+.cell-unscored .cell-rate { font-size: 12px; font-weight: 600; }
+
+.name-input { width: 152px; padding: 4px 6px; font-size: 13px; }
+.recipe-form input[type="text"] { width: auto; flex: 0 1 220px; }

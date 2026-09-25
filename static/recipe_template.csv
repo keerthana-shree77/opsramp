@@ -1,0 +1,14 @@
+Platform,Model,Category,Component,Target Version,Target Build,Mandatory,Applies To Family,Notes
+Superdome Flex,SD Flex 280,Server,RMC,3.10.5,,Yes,No,Approved RMC baseline
+HPE DL,DL380 Gen11,Server,BIOS,U54 v2.12,,Yes,No,System ROM family U54
+HPE DL,DL380 Gen11,Server,iLO,6.10,,Yes,No,
+HPE DL,DL380 Gen11,Server,SPS,1.90,,Yes,No,
+HPE DL,DL380 Gen11,Server,Intelligent Provisioning,4.40,,Yes,No,
+HPE DL,DL360 Gen11,Server,BIOS,U55 v2.12,,Yes,No,
+HPE DL,DL360 Gen11,Server,iLO,6.10,,Yes,No,
+HPE DL,DL360 Gen11,Server,SPS,N/A,,No,No,Not applicable on this model
+CSUS,3200,Server,RMC,2.5.1,,Yes,No,
+Aruba,CX 8325,Switch,Switch Firmware,10.5.1,,Yes,No,
+Aruba,*,Switch,Switch Firmware,10.4.1,,No,Yes,Family fallback for unlisted Aruba models
+Storage,Alletra 9000,Storage,OS Version,6.4.2,,Yes,No,
+VMware,ESXi,ESXi,ESXi,8.0.3,24022510,Yes,Yes,Build takes precedence over the version
